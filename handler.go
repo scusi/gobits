@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"log"
 )
 
 // ServeHTTP handler
@@ -26,16 +27,22 @@ func (b *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Take appropriate action based on what type of packet we got
 	switch packetType {
 	case "ping":
+		log.Printf("ping request: %s", r)
 		b.bitsPing(w, r)
 	case "create-session":
+		log.Printf("create-session request: %s", r)
 		b.bitsCreate(w, r)
 	case "cancel-session":
+		log.Printf("cancel-session request: %s", r)
 		b.bitsCancel(w, r, sessionID)
 	case "close-session":
+		log.Printf("close-session request: %s", r)
 		b.bitsClose(w, r, sessionID)
 	case "fragment":
+		log.Printf("fragment request: %s", r)
 		b.bitsFragment(w, r, sessionID)
 	default:
+		log.Printf("error occured: %s", r)
 		bitsError(w, "", http.StatusBadRequest, 0, ErrorContextRemoteFile)
 	}
 }

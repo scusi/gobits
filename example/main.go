@@ -14,7 +14,7 @@ import (
 
 	"log"
 
-	"gitlab.com/magan/gobits"
+	"github.com/scusi/gobits"
 )
 
 func main() {
