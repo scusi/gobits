@@ -62,12 +62,15 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 	// Check for correct protocol
 	var protocol string
 	protocols := strings.Split(r.Header.Get("BITS-Supported-Protocols"), " ")
+	log.Printf("all protocols from request: %s", protocols)
 	for _, protocol = range protocols {
 		if protocol == b.cfg.Protocol {
 			log.Printf("bitsCreate break taken!")
 			break
 		}
 	}
+	log.Printf("configured protocol from config: %s", b.cfg.Protocol)
+	log.Printf("protocol from request: %s", protocol)
 	if protocol != b.cfg.Protocol {
 		// no matching protocol found
 		log.Printf("Create-Session: no matching protocol found. %s", r)
