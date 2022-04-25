@@ -63,6 +63,7 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 	protocols := strings.Split(r.Header.Get("BITS-Supported-Protocols"), " ")
 	for _, protocol = range protocols {
 		if protocol == b.cfg.AllowedMethod {
+			log.Printf("bitsCreate break taken!")
 			break
 		}
 	}
@@ -79,6 +80,7 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 		bitsError(w, "", http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 		return
 	}
+	log.Printf("New SessionID: %s", uuid)
 
 	// Create session directory
 	tmpDir := path.Join(b.cfg.TempDir, uuid)
