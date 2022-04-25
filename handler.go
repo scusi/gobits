@@ -29,6 +29,7 @@ func (b *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "ping":
 		log.Printf("ping request: %s", r)
 		b.bitsPing(w, r)
+		return
 	case "create-session":
 		log.Printf("create-session request: %s", r)
 		b.bitsCreate(w, r)
@@ -62,7 +63,7 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 	var protocol string
 	protocols := strings.Split(r.Header.Get("BITS-Supported-Protocols"), " ")
 	for _, protocol = range protocols {
-		if protocol == b.cfg.AllowedMethod {
+		if protocol == b.cfg.Protocol {
 			log.Printf("bitsCreate break taken!")
 			break
 		}
@@ -85,9 +86,11 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 	// Create session directory
 	tmpDir := path.Join(b.cfg.TempDir, uuid)
 	if err = os.MkdirAll(tmpDir, 0600); err != nil {
+		log.Printf("error mkdirAll: %s", err.Error())
 		bitsError(w, "", http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 		return
 	}
+	log.Printf("tmpDir: %s", tmpDir)
 
 	// make sure we actually have a callback before calling it
 	if b.callback != nil {
