@@ -15,7 +15,7 @@ import (
 
 // ServeHTTP handler
 func (b *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-        dump, err := httputil.DumpRequest(r, true)
+        dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
 		log.Printf("")
 		http.Error(w, "Internal Server error", http.StatusInternalServerError)
@@ -97,7 +97,7 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 
 	// Create session directory
 	tmpDir := path.Join(b.cfg.TempDir, uuid)
-	if err = os.MkdirAll(tmpDir, 0600); err != nil {
+	if err = os.MkdirAll(tmpDir, 0755); err != nil {
 		log.Printf("error mkdirAll: %s", err.Error())
 		bitsError(w, "", http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 		return
@@ -249,9 +249,9 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
-	if exist {
+	if exist != true {
 		// Create file
-		file, err = os.OpenFile(src, os.O_CREATE|os.O_WRONLY, 0600)
+		file, err = os.OpenFile(src, os.O_CREATE|os.O_WRONLY, 0755)
 		if err != nil {
 			log.Printf("error creating new file ('%s'): %s", src, err.Error())
 			bitsError(w, uuid, http.StatusInternalServerError, 0, ErrorContextRemoteFile)
@@ -264,7 +264,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 
 	} else {
 		// Open file for append
-		file, err = os.OpenFile(src, os.O_APPEND|os.O_WRONLY, 0666)
+		file, err = os.OpenFile(src, os.O_APPEND|os.O_WRONLY, 0755)
 		if err != nil {
 			log.Printf("error appending to file ('%s'): %s", src, err.Error())
 			bitsError(w, uuid, http.StatusInternalServerError, 0, ErrorContextRemoteFile)
@@ -312,6 +312,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 		return
 	}
 	written = uint64(wr)
+	log.Printf("%d bytes written", written)
 
 	// Make sure we wrote everything we wanted
 	if written != fragmentSize-dataOffset {
