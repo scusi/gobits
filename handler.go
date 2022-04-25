@@ -68,6 +68,7 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	if protocol != b.cfg.Protocol {
 		// no matching protocol found
+		log.Printf("Create-Session: no matching protocol found. %s", r)
 		bitsError(w, "", http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
