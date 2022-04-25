@@ -81,6 +81,7 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 	// Create new session UUID
 	uuid, err := newUUID()
 	if err != nil {
+		log.Printf("Error creating new session UUID: %s", err.Error())
 		bitsError(w, "", http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -115,6 +116,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 
 	// Check for correct session
 	if uuid == "" || !isValidUUID(uuid) {
+		log.Printf("session UUID ('%s') is empty or invalid", uuid)
 		bitsError(w, "", http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -123,6 +125,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	var srcDir string
 	srcDir = path.Join(b.cfg.TempDir, uuid)
 	if b, _ := exists(srcDir); !b {
+		log.Printf("srcDir does not exist")
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -130,6 +133,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	// Get filename and make sure the path is correct
 	_, filename := path.Split(r.RequestURI)
 	if filename == "" {
+		log.Printf("path is not correct")
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -141,11 +145,13 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	for _, reg := range b.cfg.Disallowed {
 		match, err = regexp.MatchString(reg, filename)
 		if err != nil {
+			log.Printf("error matching disallowed filename")
 			bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 			return
 		}
 		if match {
 			// File is blacklisted
+			log.Printf("filename ('%s') is blacklisted", filename)
 			bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 			return
 		}
@@ -156,6 +162,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	for _, reg := range b.cfg.Allowed {
 		match, err = regexp.MatchString(reg, filename)
 		if err != nil {
+			log.Printf("error matching allowed filename")
 			bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 			return
 		}
@@ -166,6 +173,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	}
 	if !allowed {
 		// No whitelisting rules matched!
+		log.Printf("filename ('%s') is not whitelisted", filename)
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -182,12 +190,14 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	var rangeStart, rangeEnd, fileLength uint64
 	rangeStart, rangeEnd, fileLength, err = parseRange(r.Header.Get("Content-Range"))
 	if err != nil {
+		log.Printf("error parsing range: %s", err.Error())
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
 
 	// Check filesize
 	if b.cfg.MaxSize > 0 && fileLength > b.cfg.MaxSize {
+		log.Printf("file is too big, max allowed size is: %s", b.cfg.MaxSize)
 		bitsError(w, uuid, http.StatusRequestEntityTooLarge, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -196,6 +206,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	var fragmentSize uint64
 	fragmentSize, err = strconv.ParseUint(r.Header.Get("Content-Length"), 10, 64)
 	if err != nil {
+		log.Printf("error parsing fragmentSize")
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -203,16 +214,19 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	// Get posted data and confirm size
 	data, err := ioutil.ReadAll(r.Body) // should probably not read everything into memory like this
 	if err != nil {
+		log.Printf("error reading data: %s", err.Error())
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
 	if uint64(len(data)) != fragmentSize {
+		log.Printf("error: size of data is not equal to fragmentSize")
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
 
 	// Check that content-range size matches content-length
 	if rangeEnd-rangeStart+1 != fragmentSize {
+		log.Printf("error: range size does not match fragmentSize")
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -223,6 +237,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	var exist bool
 	exist, err = exists(src)
 	if err != nil {
+		log.Printf("error: src file exists: %s", err.Error())
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -230,6 +245,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 		// Create file
 		file, err = os.OpenFile(src, os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
+			log.Printf("error creating new file ('%s'): %s", src, err.Error())
 			bitsError(w, uuid, http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 			return
 		}
@@ -242,6 +258,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 		// Open file for append
 		file, err = os.OpenFile(src, os.O_APPEND|os.O_WRONLY, 0666)
 		if err != nil {
+			log.Printf("error appending to file ('%s'): %s", src, err.Error())
 			bitsError(w, uuid, http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 			return
 		}
@@ -251,6 +268,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 		var info os.FileInfo
 		info, err = file.Stat()
 		if err != nil {
+			log.Printf("error getting file stat: %s", err.Error())
 			bitsError(w, uuid, http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 			return
 		}
@@ -261,11 +279,13 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	// Sanity checks
 	if rangeEnd < fileSize {
 		// The range is already written to disk
+		log.Printf("range already written to disk")
 		w.Header().Add("BITS-Recieved-Content-Range", strconv.FormatUint(fileSize, 10))
 		bitsError(w, uuid, http.StatusRequestedRangeNotSatisfiable, 0, ErrorContextRemoteFile)
 		return
 	} else if rangeStart > fileSize {
 		// start must be <= fileSize, else there will be a gap
+		log.Printf("gap in file detected")
 		w.Header().Add("BITS-Recieved-Content-Range", strconv.FormatUint(fileSize, 10))
 		bitsError(w, uuid, http.StatusRequestedRangeNotSatisfiable, 0, ErrorContextRemoteFile)
 		return
@@ -279,6 +299,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 	var wr int
 	wr, err = file.Write(data[dataOffset:])
 	if err != nil {
+		log.Printf("error writing file: %s", err.Error())
 		bitsError(w, uuid, http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -286,6 +307,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 
 	// Make sure we wrote everything we wanted
 	if written != fragmentSize-dataOffset {
+		log.Printf("writing less data than expected")
 		bitsError(w, uuid, http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -315,16 +337,19 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 func (b *Handler) bitsCancel(w http.ResponseWriter, r *http.Request, uuid string) {
 	// Check for correct session
 	if uuid == "" || !isValidUUID(uuid) {
+		log.Printf("bitsCancel error, uuid ('%s') empty or not valid", uuid)
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
 	destDir := path.Join(b.cfg.TempDir, uuid)
 	exist, err := exists(destDir)
 	if err != nil {
+		log.Printf("error checking if dstDir already exists: %s", err.Error())
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
 	if !exist {
+		log.Printf("dstDir does not exist")
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
@@ -344,16 +369,19 @@ func (b *Handler) bitsCancel(w http.ResponseWriter, r *http.Request, uuid string
 func (b *Handler) bitsClose(w http.ResponseWriter, r *http.Request, uuid string) {
 	// Check for correct session
 	if uuid == "" || !isValidUUID(uuid) {
+		log.Printf("bitsClose error, uuid ('%s') empty or not valid", uuid)
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
 	destDir := path.Join(b.cfg.TempDir, uuid)
 	exist, err := exists(destDir)
 	if err != nil {
+		log.Printf("error checking if dstDir already exists: %s", err.Error())
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
 	if !exist {
+		log.Printf("dstDir does not exist")
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
