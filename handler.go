@@ -3,6 +3,7 @@ package gobits
 import (
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,6 +15,13 @@ import (
 
 // ServeHTTP handler
 func (b *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+        dump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		log.Printf("")
+		http.Error(w, "Internal Server error", http.StatusInternalServerError)
+		return
+	}
+	log.Printf("Request:\n%s", dump)
 	// Only allow BITS requests
 	if r.Method != b.cfg.AllowedMethod {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
