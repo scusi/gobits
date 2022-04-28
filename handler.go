@@ -102,7 +102,7 @@ func (b *Handler) bitsCreate(w http.ResponseWriter, r *http.Request) {
 		bitsError(w, "", http.StatusInternalServerError, 0, ErrorContextRemoteFile)
 		return
 	}
-	log.Printf("tmpDir: %s", tmpDir)
+	log.Printf("tmpDir '%s' have been created", tmpDir)
 
 	// make sure we actually have a callback before calling it
 	if b.callback != nil {
@@ -137,6 +137,15 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 		bitsError(w, uuid, http.StatusBadRequest, 0, ErrorContextRemoteFile)
 		return
 	}
+	// Create session directory
+	//tmpDir := path.Join(b.cfg.TempDir, uuid)
+	var err error
+	if err = os.MkdirAll(srcDir, 0755); err != nil {
+		log.Printf("error mkdirAll: %s", err.Error())
+		bitsError(w, "", http.StatusInternalServerError, 0, ErrorContextRemoteFile)
+		return
+	}
+	log.Printf("srcDir '%s' have been created", srcDir)
 
 	// Get filename and make sure the path is correct
 	_, filename := path.Split(r.RequestURI)
@@ -146,7 +155,7 @@ func (b *Handler) bitsFragment(w http.ResponseWriter, r *http.Request, uuid stri
 		return
 	}
 
-	var err error
+	//var err error
 	var match bool
 
 	// See if filename is blacklisted. If so, return an error

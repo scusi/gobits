@@ -21,11 +21,12 @@ func main() {
 
 	// Default settings, not neccessary to change then, really
 	cfg := &gobits.Config{
-		TempDir:       path.Join(os.TempDir(), "gobits"),
+		//TempDir:       path.Join(os.TempDir(), "gobits"),
+		TempDir:       path.Join(".", "data"),
 		AllowedMethod: "BITS_POST",
 		Protocol:      "{7df0354d-249b-430f-820d-3d2a9bef4931}",
 
-		MaxSize: 200 * 1024 * 1024,
+		//MaxSize: 200 * 1024 * 1024,
 
 		Allowed: []string{
 			".*",
@@ -42,22 +43,22 @@ func main() {
 		switch event {
 		case gobits.EventCreateSession:
 			// This is just for informational purposes, not much we can do here..
-			log.Printf("New session created: %v\n", session)
+			log.Printf("Event: New session created: %v\n", session)
 
 		case gobits.EventRecieveFile:
 			// This is interesting. A file has been successfully been uploaded, and we must process it (move it or whatever)
-			log.Printf("New file created: %v\n", path)
+			log.Printf("Event: New file created: %v\n", path)
 			os.Remove(path) // For debug purposes, just remove it
 
 		case gobits.EventCloseSession:
 			// A session is closed, meaning that all files in the session is completed. If you manage files in the EventRecievedFile above,
 			// you only need to clean up the directory..
-			log.Printf("Session closed: %v\n", session)
+			log.Printf("Event: Session closed: %v\n", session)
 			os.RemoveAll(path)
 
 		case gobits.EventCancelSession:
 			// A session is canceled. Just cleanup the folder. If you have handled the BITS_EVENT_FILE
-			log.Printf("Session canceled: %v\n", session)
+			log.Printf("Event: Session canceled: %v\n", session)
 			os.RemoveAll(path)
 
 		}
@@ -65,7 +66,7 @@ func main() {
 
 	bits, err := gobits.NewHandler(*cfg, cb)
 	if err != nil {
-		log.Fatalf("failed to create handler: %v", err)
+		log.Fatalf("Error: failed to create handler: %v", err)
 	}
 
 	http.Handle("/BITS/", bits)
